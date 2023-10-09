@@ -5,6 +5,7 @@
 #include "power.h"
 #include <MQTT.h>
 #include "MqttHandler.h"
+#include "WaterIsr.h"
 
 #define PWM_PIN 14
 #define FAN_PIN 33
@@ -42,7 +43,7 @@ void setup() {
     Serial.println("null");
   }
 
-  attachInterruptArg(digitalPinToInterrupt(pins->waterPin), waterIsr, controller, RISING);
+  initWater(pins->waterPin, controller);
   initTouch(controller, pins->pTouchPin, pins->mTouchPin);
   startMqtt(client);
   Serial.println("Setup complete");

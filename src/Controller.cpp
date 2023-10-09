@@ -145,6 +145,9 @@ bool Controller::waterTooLow()
 void Controller::onWaterChanged()
 {
     bool tooLow = waterTooLow();
-    turnOn(!tooLow);
+    if(tooLow)
+        turnOn(false);
     mqttClient->publish(WATER_STATE_TOPIC, tooLow ? WATER_EMPTY_PAYLOAD : WATER_GOOD_PAYLOAD, true, 0);
+    Serial.print("Too low ");
+    Serial.println(tooLow);
 }

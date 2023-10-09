@@ -33,5 +33,13 @@ bool initWater(uint8_t waterPin, Controller* c)
     SemaphoreHandle_t sem = xSemaphoreCreateBinary();
     if(sem == NULL)
         return false;
-    xTaskCreate(waterHandlerTask)
+    waterHandlerArgs* args = (waterHandlerArgs*)malloc(sizeof(waterHandlerArgs));
+    if(args == NULL)
+        return false;
+    *args = {c, sem};
+    if(xTaskCreate(waterHandlerTask, "water", configMINIMAL_STACK_SIZE+1024, args, 3, NULL) != pdPASS)
+        return false;
+
+    attachInterruptArg(digitalPinToInterrupt(waterPin), waterIsr, sem, CHANGE);
+    return true;
 }
