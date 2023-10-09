@@ -62,9 +62,8 @@ void stopFan(TimerHandle_t timer)
 
 void Controller::turnOn(bool on) 
 {
-    //uint8_t pin = 33;
     static TimerHandle_t fanTimer = xTimerCreate("timer", pdMS_TO_TICKS(5000), pdFALSE, (void*)pins.fanPin, stopFan);
-    Serial.println("Turn on");
+    on = on*!waterTooLow();
     
     _setOn(onMonitor, on);
     
@@ -91,7 +90,7 @@ void Controller::turnOn(bool on)
 
 void Controller::setPwm(uint8_t pwm)
 {
-    if(!isOn())
+    if(!isOn() || waterTooLow())
         pwm = 0;
     else if(pwm < PWM_LOW)
         pwm = PWM_LOW;
