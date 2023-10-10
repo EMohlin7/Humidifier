@@ -31,6 +31,9 @@ class Controller{
         void onMqttMsg(const char* topic, const char* payload);
 
     private:
+
+        void startLowWaterBlink();
+
         MQTTClient* mqttClient;
 
         QueueHandle_t pwmQ;

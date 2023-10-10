@@ -5,6 +5,8 @@
 #include "MqttPayloads.h"
 #include "SpeedMonitor.h"
 
+#define BLINK_TIME_MS 600
+#define BLINK_CYCLES 4
 
 
 Controller::Controller(const struct controllerPins* pins, struct onMonitor* monitor, MQTTClient* client) : onMonitor(monitor), mqttClient(client)
@@ -12,6 +14,7 @@ Controller::Controller(const struct controllerPins* pins, struct onMonitor* moni
     this->pins = *pins;
     pinMode(pins->fanPin, OUTPUT);
     pinMode(pins->waterPin, INPUT_PULLUP);
+    pinMode(pins->rLPin, OUTPUT);
     pwmMonitor = createSpeedMonitor(0);
     pwmQ = xQueueCreate(5, sizeof(uint8_t));
     mqttSendQ = xQueueCreate(5, sizeof(uint8_t));
@@ -66,7 +69,7 @@ void Controller::turnOn(bool on)
     on = on*!waterTooLow();
     
     _setOn(onMonitor, on);
-    
+    Serial.println("Turn on");
     if(!on)
         xTimerStart(fanTimer, 0);
     else
@@ -78,6 +81,9 @@ void Controller::turnOn(bool on)
     
     //Update the output
     setPwm(setMode(0)*on);
+
+    if(waterTooLow())
+        startLowWaterBlink();
 }
 
 
@@ -132,6 +138,35 @@ bool Controller::waterTooLow()
 {
     //The water pin is shorted to ground when there is water in the tank
     return digitalRead(pins.waterPin) == HIGH;
+}
+
+void lowWaterBlink(TimerHandle_t timer)
+{
+    static uint8_t i = 1;
+    //The timer id stores the pin
+    uint32_t pin = (uint32_t)pvTimerGetTimerID(timer);
+
+    if(++i % 2 == 0)
+    {
+        digitalWrite(pin, LOW);
+    }
+    else
+    {
+        digitalWrite(pin, HIGH);
+    }
+
+    if(i / 2 >= BLINK_CYCLES)
+    {
+        i = 1;
+        xTimerStop(timer, 0);
+    }
+}
+
+void Controller::startLowWaterBlink()
+{
+    static TimerHandle_t timer = xTimerCreate("blink", pdMS_TO_TICKS(BLINK_TIME_MS), pdTRUE, (void*)pins.rLPin, lowWaterBlink);
+    digitalWrite(pins.rLPin, HIGH);
+    xTimerStart(timer, 0);
 }
 
 void Controller::onWaterChanged()
