@@ -33,31 +33,31 @@ void initPublish(MQTTClient* client)
 {
     //Tell HA that the device is available
     client->publish(AVAILABILITY_TOPIC, PAYLOAD_AVAILABLE, true, 1);
-    client->loop();
+    //client->loop();
     client->publish(HA_DISCOVERY_POWER_TOPIC, HA_DISCOVERY_POWER_PAYLOAD, true, 1);
-    client->loop();
+    //client->loop();
     client->publish(HA_DISCOVERY_SPEED_TOPIC, HA_DISCOVERY_SPEED_PAYLOAD, true, 1);
-    client->loop();
+    //client->loop();
     client->publish(HA_DISCOVERY_WATER_TOPIC, HA_DISCOVERY_WATER_PAYLOAD, true, 1);
-    client->loop();
+    //client->loop();
     Controller* c = (Controller*)client->ref;
     char payload[4] = {0,0,0,0};
     if(utoa(c->getPwm(200), payload, 10) != NULL)
     {
         client->publish(SPEED_STATE_TOPIC, payload, true, 0);
     }
-    client->loop();
+   // client->loop();
     client->publish(POWER_STATE_TOPIC, c->isOn() ? POWER_ON_PAYLOAD : POWER_OFF_PAYLOAD, true, 0);
-    client->loop();
+    //client->loop();
     client->publish(WATER_STATE_TOPIC, c->waterTooLow() ? WATER_EMPTY_PAYLOAD : WATER_GOOD_PAYLOAD, true, 0);
 }
 
 void subToTopics(MQTTClient* client)
 {
     client->subscribe(POWER_SET_TOPIC, 0);
-    client->loop();
+    //client->loop();
     client->subscribe(SPEED_SET_TOPIC, 0);
-    client->loop();
+    //client->loop();
 }
 
 void mqttTask(void* args)
