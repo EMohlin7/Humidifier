@@ -79,14 +79,7 @@ void Controller::turnOn(bool on)
     //Update the output
     setPwm(setMode(0)*on);
 }
-/*void Controller::turnOnFromIsr(bool on)
-{
-    BaseType_t woken = pdFALSE;
-    xQueueSendFromISR(fanQ, &on, &woken);
 
-    //Update the output
-    //setPwmFromIsr(PWM_MAX*on);
-}*/
 
 void Controller::setPwm(uint8_t pwm)
 {
@@ -147,6 +140,4 @@ void Controller::onWaterChanged()
     if(tooLow)
         turnOn(false);
     mqttClient->publish(WATER_STATE_TOPIC, tooLow ? WATER_EMPTY_PAYLOAD : WATER_GOOD_PAYLOAD, true, 0);
-    Serial.print("Too low ");
-    Serial.println(tooLow);
 }
