@@ -12,7 +12,7 @@
 #define WATER_PIN 26
 #define TOUCH_POWER_PIN 12
 #define TOUCH_MODE_PIN 32
-#define R_LED_PIN 0
+#define R_LED_PIN 25
 #define G_LED_PIN 0
 #define B_LED_PIN 0
 
