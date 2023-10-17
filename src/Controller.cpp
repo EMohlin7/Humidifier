@@ -7,6 +7,7 @@
 
 #define BLINK_TIME_MS 600
 #define BLINK_CYCLES 4
+#define FAN_EXTRA_ON_TIME_MS 6000
 
 
 Controller::Controller(const struct controllerPins* pins, struct onMonitor* monitor, MQTTClient* client) : onMonitor(monitor), mqttClient(client)
@@ -15,6 +16,8 @@ Controller::Controller(const struct controllerPins* pins, struct onMonitor* moni
     pinMode(pins->fanPin, OUTPUT);
     pinMode(pins->waterPin, INPUT_PULLUP);
     pinMode(pins->rLPin, OUTPUT);
+    pinMode(pins->bLPin, OUTPUT);
+    pinMode(pins->gLPin, OUTPUT);
     pwmMonitor = createSpeedMonitor(0);
     pwmQ = xQueueCreate(5, sizeof(uint8_t));
     mqttSendQ = xQueueCreate(5, sizeof(uint8_t));
@@ -65,7 +68,7 @@ void stopFan(TimerHandle_t timer)
 
 void Controller::turnOn(bool on) 
 {
-    static TimerHandle_t fanTimer = xTimerCreate("timer", pdMS_TO_TICKS(5000), pdFALSE, (void*)pins.fanPin, stopFan);
+    static TimerHandle_t fanTimer = xTimerCreate("timer", pdMS_TO_TICKS(FAN_EXTRA_ON_TIME_MS), pdFALSE, (void*)pins.fanPin, stopFan);
     on = on*!waterTooLow();
     
     _setOn(onMonitor, on);
@@ -96,6 +99,25 @@ void Controller::setPwm(uint8_t pwm)
     else if(pwm > PWM_MAX)
         pwm = PWM_MAX;
     
+    uint8_t blue, green;
+    if(pwm > PWM_MID)
+    {
+        blue = 255;
+        green = 255*(1.0f-((float)(pwm-PWM_MID))/(PWM_MAX-PWM_MID));
+    }
+    else if(pwm > 0)
+    {
+        green = 255;
+        blue = 255*(pwm-PWM_LOW)/(PWM_MID-PWM_LOW);
+    }
+    else
+    {
+        green = 0;
+        blue = 0;
+    }
+    
+    analogWrite(pins.bLPin, blue);
+    analogWrite(pins.gLPin, green);
     setSpeed(pwmMonitor, pwm, 200);
     ledcWrite(0, pwm);
         
