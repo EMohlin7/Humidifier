@@ -10,14 +10,11 @@
 #define FAN_EXTRA_ON_TIME_MS 6000
 
 
-Controller::Controller(const struct controllerPins* pins, struct onMonitor* monitor, MQTTClient* client) : onMonitor(monitor), mqttClient(client)
+Controller::Controller(const struct controllerPins* pins, MQTTClient* client) : mqttClient(client)
 {
     this->pins = *pins;
-    pinMode(pins->fanPin, OUTPUT);
-    pinMode(pins->waterPin, INPUT_PULLUP);
-    pinMode(pins->rLPin, OUTPUT);
-    pinMode(pins->bLPin, OUTPUT);
-    pinMode(pins->gLPin, OUTPUT);
+    
+    onMonitor = createOnMonitor(false);
     pwmMonitor = createSpeedMonitor(0);
     pwmQ = xQueueCreate(5, sizeof(uint8_t));
     mqttSendQ = xQueueCreate(5, sizeof(uint8_t));

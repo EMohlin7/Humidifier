@@ -7,7 +7,7 @@
 class Controller{
     public:
         //static Controller* createController(struct controllerPins* pins);
-        Controller(const struct controllerPins* pins, struct onMonitor* monitor, MQTTClient* client);
+        Controller(const struct controllerPins* pins, MQTTClient* client);
         ~Controller();
 
         void turnOn(bool on);

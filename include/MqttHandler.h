@@ -21,6 +21,6 @@ struct mqttPublishArgs{
     int qos;
 };
 
-void startMqtt(MQTTClient* client);
+BaseType_t startMqtt(MQTTClient* client);
 void mqttPublishTask(void* q);
 

@@ -12,10 +12,22 @@
 #define WATER_PIN 26
 #define TOUCH_POWER_PIN 12
 #define TOUCH_MODE_PIN 32
-#define R_LED_PIN 25
-#define G_LED_PIN 0
-#define B_LED_PIN 0
+#define R_LED_PIN 4
+#define G_LED_PIN 13
+#define B_LED_PIN 25
 
+
+void setupPins(const struct controllerPins* pins)
+{
+  ledcSetup(0, 30000, 8);
+  ledcAttachPin(pins->pwmPin, 0);
+
+  pinMode(pins->fanPin, OUTPUT);
+  pinMode(pins->waterPin, INPUT_PULLUP);
+  pinMode(pins->rLPin, OUTPUT);
+  pinMode(pins->bLPin, OUTPUT);
+  pinMode(pins->gLPin, OUTPUT);
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -32,20 +44,23 @@ void setup() {
     G_LED_PIN, //Status led green
     B_LED_PIN //Status led blue
   };
-  ledcSetup(0, 30000, 8);
-  
-  ledcAttachPin(pins->pwmPin, 0);
-  struct onMonitor* monitor = createOnMonitor(false);
+  setupPins(pins);
+
   MQTTClient* client = new MQTTClient(512);
-  Controller* controller = new Controller(pins, monitor, client);
+  Controller* controller = new Controller(pins, client);
   if(controller == NULL)
   {
-    Serial.println("null");
+    Serial.println("Failed to initialize");
+    return;
   }
 
-  initWater(pins->waterPin, controller);
-  initTouch(controller, pins->pTouchPin, pins->mTouchPin);
-  startMqtt(client);
+  if(!initWater(pins->waterPin, controller) || initTouch(controller, pins->pTouchPin, pins->mTouchPin) != pdPASS || startMqtt(client) != pdPASS)
+  {
+    Serial.println("Failed to initialize");
+    return;
+  }
+  
+  
   Serial.println("Setup complete");
 }
 

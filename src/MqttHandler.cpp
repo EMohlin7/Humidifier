@@ -130,9 +130,9 @@ void mqttPublishTask(void* q)
 }
 
 
-void startMqtt(MQTTClient* client)
+BaseType_t startMqtt(MQTTClient* client)
 {
     /*struct mqttTaskArgs* args = (struct mqttTaskArgs*)malloc(sizeof(struct mqttTaskArgs));
     *args = {client, cb};*/
-    xTaskCreate(mqttTask, "mqtt", configMINIMAL_STACK_SIZE+1024*2, client, 2, NULL);
+    return xTaskCreate(mqttTask, "mqtt", configMINIMAL_STACK_SIZE+1024*2, client, 2, NULL);
 }
