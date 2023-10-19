@@ -22,6 +22,7 @@ bool IRAM_ATTR newTouch(TickType_t* lastTouch)
 
 void IRAM_ATTR handleIsr(struct isrArgs* args, touch type, TickType_t* lastTick)
 {
+    //This check is needed because for some reason both ISRs fire when switching between them
     if(touchRead(args->pin) > args->threshold)
         return;
     BaseType_t woken = false;
@@ -61,7 +62,7 @@ void touchTask(void* touchArgs)
         {
             if(val == touch::power)
                 args.controller->turnOn(!args.controller->isOn());
-            else if(val == touch::mode && args.controller->isOn())
+            else if(val == touch::mode)
                 args.controller->setPwm(args.controller->toggleMode());
         }
     }
