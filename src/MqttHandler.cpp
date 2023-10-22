@@ -8,6 +8,12 @@
 
 #define MQTT_POLL_DELAY_MS 200
 
+struct mqttTaskArgs{
+    MQTTClient* client;
+    QueueHandle_t mqttQ;
+    SemaphoreHandle_t serverSignal;
+};
+
 
 //This function is used as the callback when a mqtt msg is received
 void onMqttMsg(MQTTClient *client, char topic[], char payload[], int length){
@@ -62,8 +68,8 @@ void subToTopics(MQTTClient* client)
 
 void mqttTask(void* args)
 {   
-    QueueHandle_t servAddrsQ = xQueueCreate(2, sizeof(struct mqttConArgs));
-   
+    mqttTaskArgs a = *(mqttTaskArgs*)args;
+    free(args);
     WiFiClient wifi;
     MQTTClient* client = (MQTTClient*)args;
     IPAddress ip;
@@ -73,8 +79,8 @@ void mqttTask(void* args)
     struct mqttConArgs servCon;
     waitForAddress:
     Serial.println("Wait for address");
-    startCredServer(servAddrsQ);
-    xQueueReceive(servAddrsQ, &servCon, portMAX_DELAY);
+    xSemaphoreGive(a.serverSignal);
+    xQueueReceive(a.mqttQ, &servCon, portMAX_DELAY);
     ip.fromString(servCon.ip);
     Serial.println(ip.toString());
     //client->disconnect();
@@ -104,8 +110,6 @@ void mqttTask(void* args)
             Serial.println("Connected");
             subToTopics(client);
             initPublish(client);
-            
-            
         }
         client->loop();
         Serial.println("loop");
@@ -113,26 +117,18 @@ void mqttTask(void* args)
     }
 }
 
-void mqttPublishTask(void* q)
-{
-    mqttPublishTaskArgs* args = (mqttPublishTaskArgs*)q;
-    const QueueHandle_t queue = args->q;
-    MQTTClient* client = args->client;
-    free(args);
-    struct mqttPublishArgs msg;
-    for(;;)
-    {
-        if(xQueueReceive(queue, &msg, portMAX_DELAY) == pdFALSE)
-            continue;
-        if(client->connected())
-            client->publish(*(msg.topic), *(msg.payload), msg.retain, msg.qos);
-    }
-}
-
-
 BaseType_t startMqtt(MQTTClient* client)
 {
-    /*struct mqttTaskArgs* args = (struct mqttTaskArgs*)malloc(sizeof(struct mqttTaskArgs));
-    *args = {client, cb};*/
-    return xTaskCreate(mqttTask, "mqtt", configMINIMAL_STACK_SIZE+1024*2, client, 2, NULL);
+    struct serverTaskArgs* serverArgs = (struct serverTaskArgs*)malloc(sizeof(struct serverTaskArgs));
+    struct mqttTaskArgs* mqttArgs = (struct mqttTaskArgs*)malloc(sizeof(struct mqttTaskArgs));
+    QueueHandle_t mqttQ = xQueueCreate(2, sizeof(struct mqttConArgs));
+    SemaphoreHandle_t serverSignal = xSemaphoreCreateBinary();
+    if(serverArgs == NULL || mqttQ == NULL || serverSignal == NULL || mqttArgs == NULL)
+        return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
+    
+    *serverArgs = {mqttQ, serverSignal};
+    *mqttArgs = {client, mqttQ, serverSignal};
+    if(startCredServer(serverArgs) != pdPASS)
+        return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
+    return xTaskCreate(mqttTask, "mqtt", configMINIMAL_STACK_SIZE+1024*2, mqttArgs, 2, NULL);
 }
