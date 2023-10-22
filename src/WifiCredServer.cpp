@@ -6,20 +6,25 @@
 #define WIFI_POLL_DELAY_MS 300
 #define PORT 80
 #define SSID "Humidifier"
-#define PASS "wet"
 
 #define SSID_MAX_LEN 32
 #define PASS_MAX_LEN 63
+#define IP_MAX_LEN 15
+#define PORT_MAX_LEN 5
+
+#define HTTP_BODY_MAX_SIZE 255
 
 #define SSID_FILE_NAME "ssid"
 #define PASS_FILE_NAME "wifi_pass"
+#define MQTT_IP_FILE_NAME "ip"
+#define MQTT_PORT_FILE_NAME "port"
 
-#define WIFI_CONNECT_DELAY_MS 5000
+#define WIFI_CONNECT_DELAY_MS 3000
 
 #define NVS_NAME "connectionCreds"
 
 
-bool parseCreds(char* destination, const char* source, int maxLength)
+bool parseCreds(char* destination, const char* source, size_t maxLength)
 {
     for(int i = 0, destIndex = 0; destIndex < maxLength; ++destIndex)
     {
@@ -52,7 +57,7 @@ bool parseCreds(char* destination, const char* source, int maxLength)
         pass: The array that the null terminated password will be put in
         lenPass: The size of the pass array
 */
-bool getCreds(char* str, char* ssid, int lenSsid, char* pass, int lenPass)
+bool getCreds(char* str, char* ssid, size_t lenSsid, char* pass, size_t lenPass)
 {
     char* id = strtok(str, "&");
     if(id == NULL)
@@ -87,18 +92,21 @@ void initServer(WiFiServer& server, const char* ssid, const char* password, uint
 
 bool trySavedCreds(nvs_handle_t handle, char* ip, uint16_t* port)
 {
-    strncpy(ip, "192.168.1.77", 4+4+4+4);
-    *port = 1883;
     size_t ssidLen = SSID_MAX_LEN+1;
     size_t passLen = PASS_MAX_LEN+1;
+    size_t ipLen = IP_MAX_LEN+1;
     char ssid[ssidLen];
     char pass[passLen];
+    
     //Return instantly if no creds are saved
     if(nvs_get_str(handle, SSID_FILE_NAME, ssid, &ssidLen))
         return false;
     if(nvs_get_str(handle,PASS_FILE_NAME, pass, &passLen))
         return false;
-   
+    if(nvs_get_str(handle, MQTT_IP_FILE_NAME, ip, &ipLen))
+        return false;
+    if(nvs_get_u16(handle, MQTT_PORT_FILE_NAME, port))
+        return false;
     WiFi.begin(ssid, pass);
     vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECT_DELAY_MS));
     return WiFi.status() == WL_CONNECTED;
@@ -109,86 +117,129 @@ void finishCredSearch(nvs_handle_t handle, QueueHandle_t mqttQ, const char* ip, 
     nvs_close(handle);
     struct mqttConArgs ma = {ip, port};
     xQueueSend(mqttQ, &ma, 0);
-    vTaskDelete(NULL);
+}
+
+//Returns true if succesfully connected to wifi using the received credentials
+bool connectToWifi(char* body, nvs_handle_t nvsHandle)
+{
+    // +1 to account for null terminator
+    char ssid[SSID_MAX_LEN + 1];
+    char pass[PASS_MAX_LEN + 1];
+    if(getCreds(body, ssid, SSID_MAX_LEN + 1, pass, PASS_MAX_LEN + 1))
+    {
+        WiFi.begin(ssid, pass);
+        vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECT_DELAY_MS));
+        if(WiFi.status() == WL_CONNECTED)
+        {
+            // Save the wifi credentials in non volatile storage
+            nvs_set_str(nvsHandle, SSID_FILE_NAME, ssid);
+            nvs_set_str(nvsHandle, PASS_FILE_NAME, pass);
+            nvs_commit(nvsHandle);
+            
+            return true;
+        }
+    }
+    return false;
+}
+
+//Returns true if the form was parsed succesfully
+bool handleFormMqtt(char* body, char* ip, size_t ipLen, char* port, size_t portLen, nvs_handle_t nvsHandle, uint16_t* parcedPort)
+{
+    if(getCreds(body, ip, ipLen, port, portLen))
+    {
+        *parcedPort = atoi(port);
+        if(!*parcedPort)
+            return false;
+        
+        nvs_set_str(nvsHandle, MQTT_IP_FILE_NAME, ip);
+        nvs_set_u16(nvsHandle, MQTT_PORT_FILE_NAME, *parcedPort);
+        nvs_commit(nvsHandle);
+        return true;
+    }
+    return false;
+}
+
+
+
+bool sendWifiForm()
+{
+    //Send the wifi form if we are not connected to wifi
+    return WiFi.status() != WL_CONNECTED;
 }
 
 void serveCredTask(void* args)
 {
-    QueueHandle_t mqttQ = (QueueHandle_t)args;
+    serverTaskArgs a = *(serverTaskArgs*)args;
+    free(args);
 
+    char mqttIP[IP_MAX_LEN+1]; // including the null terminator
+    uint16_t mqttPort;
+
+    start:
+    xSemaphoreTake(a.startServerSignal, portMAX_DELAY);
     nvs_handle_t handle = 0;
     esp_err_t nvsOpenErr = nvs_open(NVS_NAME, NVS_READWRITE, &handle);
- 
-    char ip[4+4+4+4]; //4+4+4+4 is the max size of an ipv4 address including the null terminator
-    uint16_t port;
-    
-    if(!nvsOpenErr && trySavedCreds(handle, ip, &port))
-        finishCredSearch(handle, mqttQ, ip, port);
+    //Try to use saved credentials
+    if(!nvsOpenErr && trySavedCreds(handle, mqttIP, &mqttPort))
+    {
+        finishCredSearch(handle, a.mqttQ, mqttIP, mqttPort);
+        goto start;
+    }
 
     WiFiServer server = WiFiServer();
     initServer(server, SSID, NULL, PORT);
-    
+
     for(;;)
     {
         WiFiClient client = server.available(); 
         if(client.available())
         {   
-            ArduinoHttpServer::StreamHttpRequest<1024*5> httpReq(client);
+            ArduinoHttpServer::StreamHttpRequest<1024*3> httpReq(client);
             httpReq.readRequest();
             ArduinoHttpServer::Method method = httpReq.getMethod();
             
             if(method == ArduinoHttpServer::Method::Get)
             {
-                client.println(res);
+
+                client.println(sendWifiForm() ? WIFI_FORM : MQTT_FORM);
                 client.stop();
             }
             else
             {
                 
                 const char* bod = httpReq.getBody();
-                // +1 to account for the null terminator
-                size_t size = strnlen(bod, 255) + 1;
-                char b[size];
-                strncpy(b, bod, size-1);
-                b[size-1] = 0;
                 
-                // +1 to account for null terminator
-                char ssid[SSID_MAX_LEN + 1];
-                char pass[PASS_MAX_LEN + 1];
+                size_t size = strnlen(bod, HTTP_BODY_MAX_SIZE);
+                // +1 to account for the null terminator
+                char b[size+1];
+                strncpy(b, bod, size);
+                b[size] = 0;
+                client.println("HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
+                client.stop();
 
-                if(getCreds(b, ssid, SSID_MAX_LEN+1, pass, PASS_MAX_LEN+1))
+                if(sendWifiForm())
+                {   
+                    connectToWifi(b, handle);
+                }
+                else
                 {
-                    client.stop();
-                    server.stop();
-                    
-                    WiFi.softAPdisconnect();
-                    WiFi.begin(ssid, pass);
-                    vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECT_DELAY_MS));
-                    if(WiFi.status() == WL_CONNECTED)
+                    // +1 to account for null terminator
+                    char port[PORT_MAX_LEN+1];
+                    if(handleFormMqtt(b, mqttIP, IP_MAX_LEN+1, port, PORT_MAX_LEN+1, handle, &mqttPort))
                     {
-                        // Save the wifi credentials in non volatile storage
-                        if(&nvsOpenErr)
-                        {
-                            nvs_set_str(handle, SSID_FILE_NAME, ssid);
-                            nvs_set_str(handle, PASS_FILE_NAME, pass);
-                            nvs_commit(handle);
-                        }
-                        
-                        
-                        vTaskDelay(pdMS_TO_TICKS(WIFI_CONNECT_DELAY_MS));
-                        finishCredSearch(handle, mqttQ, "192.168.1.77", 1883);
+                        finishCredSearch(handle, a.mqttQ, mqttIP, mqttPort);
+                        goto start;
                     }
                 }
             }
-            client.stop();
         }
         vTaskDelay(pdMS_TO_TICKS(WIFI_POLL_DELAY_MS));
     }
 }
 
-void startCredServer(QueueHandle_t mqttQ)
+void startCredServer(serverTaskArgs* args)
 {
-    xTaskCreate(serveCredTask, "cred", configMINIMAL_STACK_SIZE+1024*10, mqttQ, 2, NULL);
+    xTaskCreate(serveCredTask, "cred", configMINIMAL_STACK_SIZE+1024*10, args, 2, NULL);
 }
 
     
