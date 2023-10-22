@@ -112,10 +112,11 @@ void Controller::setPwm(uint8_t pwm)
         green = 0;
         blue = 0;
     }
-    
+    if(!setSpeed(pwmMonitor, pwm, 200))
+        return;
     analogWrite(pins.bLPin, blue);
     analogWrite(pins.gLPin, green);
-    setSpeed(pwmMonitor, pwm, 200);
+    
     ledcWrite(0, pwm);
         
     char payload[4] = {0,0,0,0};
