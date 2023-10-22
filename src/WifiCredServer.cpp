@@ -174,15 +174,15 @@ void serveCredTask(void* args)
 
     char mqttIP[IP_MAX_LEN+1]; // including the null terminator
     uint16_t mqttPort;
-
+    nvs_handle_t nvsHandle = 0;
     start:
     xSemaphoreTake(a.startServerSignal, portMAX_DELAY);
-    nvs_handle_t handle = 0;
-    esp_err_t nvsOpenErr = nvs_open(NVS_NAME, NVS_READWRITE, &handle);
-    //Try to use saved credentials
-    if(!nvsOpenErr && trySavedCreds(handle, mqttIP, &mqttPort))
+    esp_err_t nvsOpenErr = nvs_open(NVS_NAME, NVS_READWRITE, &nvsHandle);
+    //Try to use saved credentials. Only if not connected to wifi. This is a quick fix to stop an infinite loop between this task and the mqttTask if wrong mqtt address is stored.
+    //Should be fixed properly
+    if(!nvsOpenErr && WiFi.status() != WL_CONNECTED && trySavedCreds(nvsHandle, mqttIP, &mqttPort))
     {
-        finishCredSearch(handle, a.mqttQ, mqttIP, mqttPort);
+        finishCredSearch(nvsHandle, a.mqttQ, mqttIP, mqttPort);
         goto start;
     }
 
@@ -217,17 +217,17 @@ void serveCredTask(void* args)
 
                 if(sendWifiForm())
                 {   
-                    connectToWifi(b, handle);
+                    connectToWifi(b, nvsHandle);
                 }
                 else
                 {
                     // +1 to account for null terminator
                     char port[PORT_MAX_LEN+1];
-                    if(handleFormMqtt(b, mqttIP, IP_MAX_LEN+1, port, PORT_MAX_LEN+1, handle, &mqttPort))
+                    if(handleFormMqtt(b, mqttIP, IP_MAX_LEN+1, port, PORT_MAX_LEN+1, nvsHandle, &mqttPort))
                     {
                         server.stop();
                         WiFi.softAPdisconnect();
-                        finishCredSearch(handle, a.mqttQ, mqttIP, mqttPort);
+                        finishCredSearch(nvsHandle, a.mqttQ, mqttIP, mqttPort);
                         goto start;
                     }
                 }
