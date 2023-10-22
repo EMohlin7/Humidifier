@@ -237,9 +237,9 @@ void serveCredTask(void* args)
     }
 }
 
-void startCredServer(serverTaskArgs* args)
+BaseType_t startCredServer(serverTaskArgs* args)
 {
-    xTaskCreate(serveCredTask, "cred", configMINIMAL_STACK_SIZE+1024*10, args, 2, NULL);
+    return xTaskCreate(serveCredTask, "cred", configMINIMAL_STACK_SIZE+1024*10, args, 2, NULL);
 }
 
     

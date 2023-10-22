@@ -1,7 +1,5 @@
 #pragma once
 #include <WiFi.h>
-void startCredServer(QueueHandle_t mqttQ);
-
 struct serverTaskArgs{
   QueueHandle_t mqttQ;
   SemaphoreHandle_t startServerSignal;
@@ -12,6 +10,7 @@ struct mqttConArgs{
     uint32_t port;
 };
 
+BaseType_t startCredServer(serverTaskArgs* args);
 const String WIFI_FORM = 
   "HTTP/1.1 200 OK\r\n"
   "Content-Type: text/html\r\n"
