@@ -206,9 +206,7 @@ void serveCredTask(void* args)
             }
             else
             {
-                
                 const char* bod = httpReq.getBody();
-                
                 size_t size = strnlen(bod, HTTP_BODY_MAX_SIZE);
                 // +1 to account for the null terminator
                 char b[size+1];
@@ -227,6 +225,8 @@ void serveCredTask(void* args)
                     char port[PORT_MAX_LEN+1];
                     if(handleFormMqtt(b, mqttIP, IP_MAX_LEN+1, port, PORT_MAX_LEN+1, handle, &mqttPort))
                     {
+                        server.stop();
+                        WiFi.softAPdisconnect();
                         finishCredSearch(handle, a.mqttQ, mqttIP, mqttPort);
                         goto start;
                     }
