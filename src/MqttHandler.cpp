@@ -71,7 +71,7 @@ void mqttTask(void* args)
     mqttTaskArgs a = *(mqttTaskArgs*)args;
     free(args);
     WiFiClient wifi;
-    MQTTClient* client = (MQTTClient*)args;
+    MQTTClient* client = a.client;
     IPAddress ip;
     client->onMessageAdvanced(onMqttMsg);
 
