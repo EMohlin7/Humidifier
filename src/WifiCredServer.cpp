@@ -167,6 +167,8 @@ bool sendWifiForm()
     return WiFi.status() != WL_CONNECTED;
 }
 
+
+//TODO: Refactor
 void serveCredTask(void* args)
 {
     serverTaskArgs a = *(serverTaskArgs*)args;
