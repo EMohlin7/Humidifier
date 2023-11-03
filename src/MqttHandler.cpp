@@ -112,7 +112,6 @@ void mqttTask(void* args)
             initPublish(client);
         }
         client->loop();
-        Serial.println("loop");
         vTaskDelay(pdMS_TO_TICKS(MQTT_POLL_DELAY_MS));
     }
 }
