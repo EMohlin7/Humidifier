@@ -7,14 +7,14 @@
 #include "MqttHandler.h"
 #include "WaterIsr.h"
 
-#define PWM_PIN 14
+#define PWM_PIN 26
 #define FAN_PIN 33
-#define WATER_PIN 26
-#define TOUCH_POWER_PIN 12
-#define TOUCH_MODE_PIN 32
-#define R_LED_PIN 4
-#define G_LED_PIN 13
-#define B_LED_PIN 25
+#define WATER_PIN 18 
+#define TOUCH_POWER_PIN 15
+#define TOUCH_MODE_PIN 0
+#define R_LED_PIN 2
+#define G_LED_PIN 4
+#define B_LED_PIN 16
 
 
 void setupPins(const struct controllerPins* pins)
