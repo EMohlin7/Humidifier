@@ -12,7 +12,7 @@ struct isrArgs{
     QueueHandle_t queue;   
 };
 
-bool IRAM_ATTR newTouch(TickType_t* lastTouch)
+inline bool newTouch(TickType_t* lastTouch)
 {
     TickType_t tick = xTaskGetTickCountFromISR();
     bool newTouch = pdTICKS_TO_MS(tick - *lastTouch) > TOUCH_WAIT_MS;
@@ -20,7 +20,7 @@ bool IRAM_ATTR newTouch(TickType_t* lastTouch)
     return newTouch;
 }
 
-void IRAM_ATTR handleIsr(struct isrArgs* args, touch type, TickType_t* lastTick)
+inline void handleIsr(struct isrArgs* args, touch type, TickType_t* lastTick)
 {
     //This check is needed because for some reason both ISRs fire when switching between them
     if(touchRead(args->pin) > args->threshold)
@@ -51,6 +51,8 @@ struct touchTaskArgs{
     Controller* controller;
 };
 
+
+//Handles the touch after one of the touch ISRs has fired
 void touchTask(void* touchArgs)
 {
     struct touchTaskArgs args = *(struct touchTaskArgs*)touchArgs;
@@ -70,14 +72,15 @@ void touchTask(void* touchArgs)
 
 BaseType_t initTouch(Controller* controller, uint8_t powerPin, uint8_t modePin)
 {
-    struct touchTaskArgs* taskArgs = (struct touchTaskArgs*)malloc(sizeof(struct touchTaskArgs));
+    //Allocate arguments for the ISRs
     struct isrArgs* pIsrArgs = (struct isrArgs*)malloc(2*sizeof(struct isrArgs));
-    if(taskArgs == NULL || pIsrArgs == NULL)
+    if(pIsrArgs == NULL)
         return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
     
     struct isrArgs* mIsrArgs = pIsrArgs+1;
     
-
+    //Allocate args for task
+    struct touchTaskArgs* taskArgs = (struct touchTaskArgs*)malloc(sizeof(struct touchTaskArgs));
     QueueHandle_t q = xQueueCreate(5, sizeof(touch));
     if(taskArgs == NULL || q == NULL)
         return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;

@@ -160,6 +160,22 @@ bool Controller::waterTooLow()
     return digitalRead(pins.waterPin) == HIGH;
 }
 
+void Controller::startLowWaterBlink()
+{
+    static TimerHandle_t timer = xTimerCreate("blink", pdMS_TO_TICKS(BLINK_TIME_MS), pdTRUE, (void*)pins.rLPin, lowWaterBlink);
+    digitalWrite(pins.rLPin, HIGH);
+    xTimerStart(timer, 0);
+}
+
+void Controller::onWaterChanged()
+{
+    bool tooLow = waterTooLow();
+    if(tooLow)
+        turnOn(false);
+    mqttClient->publish(WATER_STATE_TOPIC, tooLow ? WATER_EMPTY_PAYLOAD : WATER_GOOD_PAYLOAD, true, 0);
+}
+
+
 void lowWaterBlink(TimerHandle_t timer)
 {
     static uint8_t i = 1;
@@ -180,19 +196,4 @@ void lowWaterBlink(TimerHandle_t timer)
         i = 1;
         xTimerStop(timer, 0);
     }
-}
-
-void Controller::startLowWaterBlink()
-{
-    static TimerHandle_t timer = xTimerCreate("blink", pdMS_TO_TICKS(BLINK_TIME_MS), pdTRUE, (void*)pins.rLPin, lowWaterBlink);
-    digitalWrite(pins.rLPin, HIGH);
-    xTimerStart(timer, 0);
-}
-
-void Controller::onWaterChanged()
-{
-    bool tooLow = waterTooLow();
-    if(tooLow)
-        turnOn(false);
-    mqttClient->publish(WATER_STATE_TOPIC, tooLow ? WATER_EMPTY_PAYLOAD : WATER_GOOD_PAYLOAD, true, 0);
 }

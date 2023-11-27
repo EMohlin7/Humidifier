@@ -8,13 +8,13 @@
 #include "WaterIsr.h"
 
 #define PWM_PIN 26
-#define FAN_PIN 33
-#define WATER_PIN 18 
-#define TOUCH_POWER_PIN 15
-#define TOUCH_MODE_PIN 0
-#define R_LED_PIN 2
-#define G_LED_PIN 4
-#define B_LED_PIN 16
+#define FAN_PIN 27
+#define WATER_PIN 12 
+#define TOUCH_POWER_PIN 13
+#define TOUCH_MODE_PIN 14
+#define R_LED_PIN 32
+#define G_LED_PIN 33
+#define B_LED_PIN 25
 
 
 void setupPins(const struct controllerPins* pins)
@@ -31,7 +31,7 @@ void setupPins(const struct controllerPins* pins)
 
 void setup() {
   // put your setup code here, to run once:
-  //Serial.begin(9600);
+  Serial.begin(9600);
   
   struct controllerPins* pins = (struct controllerPins*)malloc(sizeof(struct controllerPins));
   *pins = {

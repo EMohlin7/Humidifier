@@ -32,7 +32,7 @@ bool parseCreds(char* destination, const char* source, size_t maxLength)
         if(c == '%')
         {
             char hex[3] = {source[++i], source[++i], 0};
-            int val = 0;
+            unsigned int val = 0;
             if(sscanf(hex, "%2x", &val) == EOF)
                 return false;
             c = val;
@@ -43,7 +43,7 @@ bool parseCreds(char* destination, const char* source, size_t maxLength)
             break;
         ++i;
     }
-    destination[maxLength-1];
+    destination[maxLength-1] = NULL;
     return true;
 }
 

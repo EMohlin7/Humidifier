@@ -6,7 +6,7 @@
 #include "Controller.h"
 
 
-#define MQTT_POLL_DELAY_MS 200
+#define MQTT_POLL_DELAY_MS 500
 
 struct mqttTaskArgs{
     MQTTClient* client;
