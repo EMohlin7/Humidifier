@@ -5,16 +5,16 @@
 #include "power.h"
 #include <MQTT.h>
 #include "MqttHandler.h"
-#include "WaterIsr.h"
+#include "Water.h"
 
-#define PWM_PIN 26
-#define FAN_PIN 27
-#define WATER_PIN 12 
-#define TOUCH_POWER_PIN 13
-#define TOUCH_MODE_PIN 14
-#define R_LED_PIN 32
-#define G_LED_PIN 33
-#define B_LED_PIN 25
+#define PWM_PIN 22
+#define FAN_PIN 19
+#define WATER_PIN 23 
+#define TOUCH_POWER_PIN 18
+#define TOUCH_MODE_PIN 5
+#define R_LED_PIN 4
+#define G_LED_PIN 16
+#define B_LED_PIN 17
 
 
 void setupPins(const struct controllerPins* pins)
@@ -31,7 +31,7 @@ void setupPins(const struct controllerPins* pins)
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  //Serial.begin(9600);
   
   struct controllerPins* pins = (struct controllerPins*)malloc(sizeof(struct controllerPins));
   *pins = {
@@ -54,7 +54,7 @@ void setup() {
     return;
   }
 
-  if(!initWater(pins->waterPin, controller) || initTouch(controller, pins->pTouchPin, pins->mTouchPin) != pdPASS || startMqtt(client) != pdPASS)
+  if(!initWater(pins->waterPin, controller) /*initTouch(controller, pins->pTouchPin, pins->mTouchPin) != pdPASS*/ || startMqtt(client) != pdPASS)
   {
     Serial.println("Failed to initialize");
     return;
