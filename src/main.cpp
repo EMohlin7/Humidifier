@@ -68,7 +68,5 @@ void setup() {
 
 void loop(){
   vTaskDelete(NULL);
-  Serial.println(touchRead(TOUCH_POWER_PIN));
-  vTaskDelay(pdMS_TO_TICKS(100));
 }
 
