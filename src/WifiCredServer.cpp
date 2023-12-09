@@ -43,7 +43,7 @@ bool parseCreds(char* destination, const char* source, size_t maxLength)
             break;
         ++i;
     }
-    destination[maxLength-1] = NULL;
+    destination[maxLength-1] = 0;
     return true;
 }
 
