@@ -80,7 +80,7 @@ void Controller::turnOn(bool on)
     mqttClient->publish(POWER_STATE_TOPIC, on ? POWER_ON_PAYLOAD : POWER_OFF_PAYLOAD, true, 0);
     
     //Update the output
-    setPwm(setMode(0)*on);
+    setPwm(setMode(2)*on);
 
     if(waterTooLow())
         startLowWaterBlink();
