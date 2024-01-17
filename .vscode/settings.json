@@ -16,5 +16,6 @@
         "initializer_list": "cpp"
     },
     "cmake.configureOnOpen": false,
-    "cmake.sourceDirectory": "C:/Users/edvin/Documents/PlatformIO/Projects/Humidifer/.pio/libdeps/az-delivery-devkit-v4/MQTT"
+    "cmake.sourceDirectory": "C:/Users/edvin/Documents/PlatformIO/Projects/Humidifer/.pio/libdeps/az-delivery-devkit-v4/MQTT",
+    "idf.portWin": "COM10"
 }

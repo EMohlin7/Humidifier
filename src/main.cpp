@@ -12,8 +12,8 @@
 #define WATER_PIN 23 
 #define TOUCH_POWER_PIN 18
 #define TOUCH_MODE_PIN 5
-#define R_LED_PIN 4
-#define G_LED_PIN 16
+#define R_LED_PIN 16
+#define G_LED_PIN 4
 #define B_LED_PIN 17
 
 
